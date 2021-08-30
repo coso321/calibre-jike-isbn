@@ -1,5 +1,5 @@
-NAME=zhujian
-SRC=zhujian
+NAME=jike
+SRC=jike
 ZIP=$(NAME).zip
 SRC_FILES=__init__.py
 

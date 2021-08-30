@@ -27,7 +27,7 @@ NAMESPACES = {
 
 class jike(Source):
 
-    name = "Zhujian books"
+    name = "jike isbn"
     author = "Rlyehzoo"
     version = (1, 0, 0)
     minimum_calibre_version = (1, 0, 0)
@@ -63,9 +63,6 @@ class jike(Source):
             True,
             _("Include subtitle in book title:"),
             _("Whether to append subtitle in the book title."),
-        ),
-        Option(
-            "apikey", "string", "", _("douban api v2 apikey"), _("douban api v2 apikey")
         ),
     )
 
@@ -289,8 +286,8 @@ class jike(Source):
     ):
 
         # check apikey
-        if not self.prefs.get("apikey"):
-            return
+        #if not self.prefs.get("apikey"):
+        #    return
 
         import json
 
