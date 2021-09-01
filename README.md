@@ -19,8 +19,10 @@ You will be able to locate a `jike.zip` in the folder, please remember the path
 
 (3) launch the `Prefernces` page, click the `Plugins` icon
 
+<img src="https://github.com/Rlyehzoo/calibre-jike-isbn/tree/master/jike/fig/2.jpg" >
+
 (4) click the `Load plugin from file` button, and choose `jike.zip` from step (1)
 
-(5) after loading the plugin into `calibre`, select the plugin named 'Douban Books Reload', click the `Customize plugin` button, and input your API key
+<img src="https://github.com/Rlyehzoo/calibre-jike-isbn/tree/master/jike/fig/3.jpg" >
 
-(6) enjoy
+(5) enjoy!
