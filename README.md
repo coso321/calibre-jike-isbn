@@ -1,8 +1,3 @@
-# About this project
-
-[`Calibre`](https://github.com/kovidgoyal/calibre) used to offer an official douban plugin to fetch the book metadata from douban.com. However, the author of `Calibre` chooses to not maintain it any more. So I decide to maintain my own branch.
-
-
 # How to install
 
 (1) in `Terminal.app` or your prefer command line terminal
