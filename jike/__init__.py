@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import hashlib
 import re
 import time
+
 try:
     from queue import Empty, Queue
 except ImportError:
@@ -20,10 +21,10 @@ from calibre.utils.cleantext import clean_ascii_chars
 from calibre.utils.localization import canonicalize_lang
 
 NAMESPACES = {
-    'openSearch': 'http://a9.com/-/spec/opensearchrss/1.0/',
-    'atom': 'http://www.w3.org/2005/Atom',
-    'dc': 'http://purl.org/dc/terms',
-    'gd': 'http://schemas.google.com/g/2005'
+    "openSearch": "http://a9.com/-/spec/opensearchrss/1.0/",
+    "atom": "http://www.w3.org/2005/Atom",
+    "dc": "http://purl.org/dc/terms",
+    "gd": "http://schemas.google.com/g/2005",
 }
 
 
@@ -31,8 +32,8 @@ def get_details(browser, url, timeout):  # {{{
     try:
         raw = browser.open_novisit(url, timeout=timeout).read()
     except Exception as e:
-        print('try here 1 ?')
-        gc = getattr(e, 'getcode', lambda: -1)
+        print("try here 1 ?")
+        gc = getattr(e, "getcode", lambda: -1)
         if gc() != 403:
             raise
         # Google is throttling us, wait a little
@@ -51,14 +52,16 @@ def XPath(x):
     ans = xpath_cache.get(x)
     if ans is None:
         from lxml import etree
+
         ans = xpath_cache[x] = etree.XPath(x, namespaces=NAMESPACES)
     return ans
 
 
 def cleanup_title(title):
-    if ':' in title:
-        return title.partition(':')[0]
-    return re.sub(r'(.+?) \(.+\)', r'\1', title)
+    if ":" in title:
+        return title.partition(":")[0]
+    return re.sub(r"(.+?) \(.+\)", r"\1", title)
+
 
 def get_isbn_url(isbns):
     try:
@@ -66,15 +69,15 @@ def get_isbn_url(isbns):
     except ImportError:
         from urllib import urlencode
     ISBN_URL = "https://api.jike.xyz/situ/book/isbn/"
-    
+
     urls = []
 
     for isbn in isbns:
-        print('isbn is ',isbn)
-        isbn=isbn.strip()
+        print("isbn is ", isbn)
+        isbn = isbn.strip()
         url = ISBN_URL + isbn
         urls.append(url)
-        
+
     return urls
 
 
@@ -83,9 +86,9 @@ def to_metadata(browser, log, entry_, timeout):  # {{{
     import re
 
     douban_id = str(entry_.get("douban"))
-    log('douban_id',douban_id)
+    log("douban_id", douban_id)
     title = entry_.get("name")
-    log('title',title)
+    log("title", title)
     description = entry_.get("description")
     # subtitle = entry_.get('subtitle')  # TODO: std metada doesn't have this field
     isbn = str(entry_.get("id"))  # ISBN11 is obsolute, use ISBN13
@@ -96,9 +99,9 @@ def to_metadata(browser, log, entry_, timeout):  # {{{
     rating = entry_.get("doubanScore")
 
     if not authors:
-        authors = [_('Unknown')]
+        authors = [_("Unknown")]
     else:
-        authors=[authors]
+        authors = [authors]
     if not douban_id or not title:
         # Silently discard this entry
         return None
@@ -149,8 +152,8 @@ def to_metadata(browser, log, entry_, timeout):  # {{{
     # mi.tags = tags
 
     ## pubdate
-    #pubdate = get_text(extra, date)
-    #if pubdate:
+    # pubdate = get_text(extra, date)
+    # if pubdate:
     #    from calibre.utils.date import parse_date, utcnow
     #    try:
     #        default = utcnow().replace(day=15)
@@ -161,50 +164,52 @@ def to_metadata(browser, log, entry_, timeout):  # {{{
     return mi
 
 
-
-def get_isbns(browser, log, entry_,timeout):  # {{{
+def get_isbns(browser, log, entry_, timeout):  # {{{
     from lxml import etree
-    
-    entry = XPath('//atom:entry')
-    entry_id = XPath('descendant::atom:id')
+
+    entry = XPath("//atom:entry")
+    entry_id = XPath("descendant::atom:id")
     url = XPath('descendant::atom:link[@rel="self"]/@href')
-    creator = XPath('descendant::dc:creator')
-    identifier = XPath('descendant::dc:identifier')
-    title = XPath('descendant::dc:title')
-    date = XPath('descendant::dc:date')
-    publisher = XPath('descendant::dc:publisher')
-    subject = XPath('descendant::dc:subject')
-    description = XPath('descendant::dc:description')
-    language = XPath('descendant::dc:language')
+    creator = XPath("descendant::dc:creator")
+    identifier = XPath("descendant::dc:identifier")
+    title = XPath("descendant::dc:title")
+    date = XPath("descendant::dc:date")
+    publisher = XPath("descendant::dc:publisher")
+    subject = XPath("descendant::dc:subject")
+    description = XPath("descendant::dc:description")
+    language = XPath("descendant::dc:language")
 
     id_url = entry_id(entry_)[0].text
-    google_id = id_url.split('/')[-1]
+    google_id = id_url.split("/")[-1]
     details_url = url(entry_)[0]
-    title_ = ': '.join([x.text for x in title(entry_)]).strip()
+    title_ = ": ".join([x.text for x in title(entry_)]).strip()
     authors = [x.text.strip() for x in creator(entry_) if x.text]
 
     # ISBN
     isbns = []
-    
+
     try:
         raw = get_details(browser, details_url, timeout)
         feed = etree.fromstring(
             xml_to_unicode(clean_ascii_chars(raw), strip_encoding_pats=True)[0],
-            parser=etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            parser=etree.XMLParser(
+                recover=True, no_network=True, resolve_entities=False
+            ),
         )
         extra = entry(feed)[0]
     except:
-        log.exception('Failed to get additional details for')
+        log.exception("Failed to get additional details for")
         return None
 
     for x in identifier(extra):
-        t = type('')(x.text).strip()
-        if t[:5].upper() in ('ISBN:', 'LCCN:', 'OCLC:'):
-            if t[:5].upper() == 'ISBN:':
+        t = type("")(x.text).strip()
+        if t[:5].upper() in ("ISBN:", "LCCN:", "OCLC:"):
+            if t[:5].upper() == "ISBN:":
                 t = check_isbn(t[5:])
                 if len(t) == 13:
                     isbns.append(t)
     return isbns
+
 
 # }}}
 
@@ -221,17 +226,25 @@ class jike(Source):
         "Useful only for Chinese language books."
     )
 
-    capabilities = frozenset({'identify', 'cover'})
-    touched_fields = frozenset({
-        'title', 'authors', 'tags', 'pubdate', 'comments', 'publisher',
-        'identifier:isbn', 'identifier:douban'
-    })
+    capabilities = frozenset({"identify", "cover"})
+    touched_fields = frozenset(
+        {
+            "title",
+            "authors",
+            "tags",
+            "pubdate",
+            "comments",
+            "publisher",
+            "identifier:isbn",
+            "identifier:douban",
+        }
+    )
     supports_gzip_transfer_encoding = True
     cached_cover_url_is_reliable = False
 
     DOUBAN_API_URL = "https://api.douban.com/v2/book/search"
     DOUBAN_BOOK_URL = "https://book.douban.com/subject/%s/"
-    GOOGLE_COVER = 'https://books.google.com/books?id=%s&printsec=frontcover&img=1'
+    GOOGLE_COVER = "https://books.google.com/books?id=%s&printsec=frontcover&img=1"
 
     options = (
         Option(
@@ -241,11 +254,10 @@ class jike(Source):
             _("Include subtitle in book title:"),
             _("Whether to append subtitle in the book title."),
         ),
-        #Option(
-        #    "apikey", "string", "", _("zhujian api apikey"), _("zhujian api apikey")
-        #),
+        Option(
+            "apikey", "string", "", _("zhujian api apikey"), _("zhujian api apikey")
+        ),
     )
-
 
     def get_book_url(self, identifiers):  # {{{
         db = identifiers.get("douban", None)
@@ -254,16 +266,18 @@ class jike(Source):
 
     # }}}
 
-    def create_query(self, log, title=None, authors=None, identifiers={}):  # {{{
+    def create_query(
+        self, log, apikey, title=None, authors=None, identifiers={}
+    ):  # {{{
         try:
             from urllib.parse import urlencode
         except ImportError:
             from urllib import urlencode
-        BASE_URL = 'https://books.google.com/books/feeds/volumes?'
+        BASE_URL = "https://books.google.com/books/feeds/volumes?"
         ISBN_URL = "https://api.jike.xyz/situ/book/isbn/"
 
-        isbn = check_isbn(identifiers.get('isbn', None))
-        q = ''
+        isbn = check_isbn(identifiers.get("isbn", None))
+        q = ""
         t = None
         if isbn is not None:
             q = isbn
@@ -273,14 +287,16 @@ class jike(Source):
             authors = None
 
             def build_term(prefix, parts):
-                return ' '.join('in' + prefix + ':' + x for x in parts)
+                return " ".join("in" + prefix + ":" + x for x in parts)
 
             title_tokens = list(self.get_title_tokens(title))
             if title_tokens:
-                q += build_term('title', title_tokens)
-            author_tokens = list(self.get_author_tokens(authors, only_first_author=True))
+                q += build_term("title", title_tokens)
+            author_tokens = list(
+                self.get_author_tokens(authors, only_first_author=True)
+            )
             if author_tokens:
-                q += ('+' if q else '') + build_term('author', author_tokens)
+                q += ("+" if q else "") + build_term("author", author_tokens)
 
         if not q:
             return None
@@ -288,17 +304,19 @@ class jike(Source):
         url = None
 
         if t == "isbn":
-            url = ISBN_URL + q
+            url = "{}/{}?apikey={}".format(ISBN_URL, q, apikey)
             return url
         else:
             if not isinstance(q, bytes):
-                q = q.encode('utf-8')
-            return BASE_URL + urlencode({
-                'q': q,
-                'max-results': 20,
-                'start-index': 1,
-                'min-viewability': 'none',
-            })
+                q = q.encode("utf-8")
+            return BASE_URL + urlencode(
+                {
+                    "q": q,
+                    "max-results": 20,
+                    "start-index": 1,
+                    "min-viewability": "none",
+                }
+            )
 
     # }}}
 
@@ -311,19 +329,14 @@ class jike(Source):
         authors=None,
         identifiers={},
         timeout=30,
-        get_best_cover=False
+        get_best_cover=False,
     ):
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
-            log.info('No cached cover found, running identify')
+            log.info("No cached cover found, running identify")
             rq = Queue()
             self.identify(
-                log,
-                rq,
-                abort,
-                title=title,
-                authors=authors,
-                identifiers=identifiers
+                log, rq, abort, title=title, authors=authors, identifiers=identifiers
             )
             if abort.is_set():
                 return
@@ -343,7 +356,7 @@ class jike(Source):
                 if cached_url is not None:
                     break
         if cached_url is None:
-            log.info('No cover found')
+            log.info("No cover found")
             return
 
         br = self.browser
@@ -357,21 +370,21 @@ class jike(Source):
         except:
             log.exception("Failed to download cover from:", cached_url)
 
-#        for candidate in (0, 1):
-#            if abort.is_set():
-#                return
-#            url = cached_url + '&zoom={}'.format(candidate)
-#            log('Downloading cover from:', cached_url)
-#            try:
-#                cdata = br.open_novisit(url, timeout=timeout).read()
-#                if cdata:
-#                    if hashlib.md5(cdata).hexdigest() in self.DUMMY_IMAGE_MD5:
-#                        log.warning('Google returned a dummy image, ignoring')
-#                    else:
-#                        result_queue.put((self, cdata))
-#                        break
-#            except Exception:
-#                log.exception('Failed to download cover from:', cached_url)
+    #        for candidate in (0, 1):
+    #            if abort.is_set():
+    #                return
+    #            url = cached_url + '&zoom={}'.format(candidate)
+    #            log('Downloading cover from:', cached_url)
+    #            try:
+    #                cdata = br.open_novisit(url, timeout=timeout).read()
+    #                if cdata:
+    #                    if hashlib.md5(cdata).hexdigest() in self.DUMMY_IMAGE_MD5:
+    #                        log.warning('Google returned a dummy image, ignoring')
+    #                    else:
+    #                        result_queue.put((self, cdata))
+    #                        break
+    #            except Exception:
+    #                log.exception('Failed to download cover from:', cached_url)
 
     # }}}
 
@@ -389,23 +402,16 @@ class jike(Source):
 
     # }}}
 
-    def get_all_details(  # {{{
-        self,
-        br,
-        log,
-        entries,
-        abort,
-        result_queue,
-        timeout
-    ):
+    def get_all_details(self, br, log, entries, abort, result_queue, timeout):  # {{{
         from lxml import etree
+
         for relevance, i in enumerate(entries):
             try:
                 ans = to_metadata(br, log, i, timeout)
                 if isinstance(ans, Metadata):
                     ans.source_relevance = relevance
                     db = ans.identifiers["douban"]
-                    for isbn in getattr(ans, 'all_isbns', []):
+                    for isbn in getattr(ans, "all_isbns", []):
                         self.cache_isbn_to_identifier(isbn, db)
                     if ans.has_douban_cover:
                         self.cache_identifier_to_cover_url(db, ans.has_douban_cover)
@@ -413,7 +419,7 @@ class jike(Source):
                     result_queue.put(ans)
             except:
                 log.exception(
-                    'Failed to get metadata for identify entry:', etree.tostring(i)
+                    "Failed to get metadata for identify entry:", etree.tostring(i)
                 )
             if abort.is_set():
                 break
@@ -428,29 +434,34 @@ class jike(Source):
         title=None,
         authors=None,
         identifiers={},
-        timeout=30
+        timeout=30,
     ):
         from lxml import etree
         import json
-        entry = XPath('//atom:entry')
+
+        entry = XPath("//atom:entry")
 
         # check apikey
-        #if not self.prefs.get("apikey"):
-        #    return
+        if not self.prefs.get("apikey"):
+            return
 
         query = self.create_query(
-            log, title=title, authors=authors, identifiers=identifiers
+            log,
+            apikey=self.prefs["apikey"],
+            title=title,
+            authors=authors,
+            identifiers=identifiers,
         )
         if not query:
-            log.error('Insufficient metadata to construct query')
+            log.error("Insufficient metadata to construct query")
             return
         isbn = check_isbn(identifiers.get("isbn", None))
-        log('Making query:', query)
+        log("Making query:", query)
         br = self.browser
         if isbn is not None:
-            #br.addheaders = [
+            # br.addheaders = [
             #    ('apikey', self.prefs["apikey"]),
-            #]
+            # ]
 
             try:
                 raw = br.open_novisit(query, timeout=timeout).read()
@@ -463,57 +474,64 @@ class jike(Source):
                 log.exception("Failed to parse identify results")
                 return as_unicode(e)
             if "data" in j:
-                j=j["data"]
+                j = j["data"]
                 entries = [j]
             else:
                 entries = []
                 entries.append(j)
             if not entries and identifiers and title and authors and not abort.is_set():
                 return self.identify(
-                    log, result_queue, abort, title=title, authors=authors, timeout=timeout
+                    log,
+                    result_queue,
+                    abort,
+                    title=title,
+                    authors=authors,
+                    timeout=timeout,
                 )
-            log('here entries are',entries)
+            log("here entries are", entries)
         else:
             try:
                 raw = br.open_novisit(query, timeout=timeout).read()
             except Exception as e:
-                log.exception('Failed to make identify query: %r' % query)
+                log.exception("Failed to make identify query: %r" % query)
                 return as_unicode(e)
 
             try:
                 feed = etree.fromstring(
                     xml_to_unicode(clean_ascii_chars(raw), strip_encoding_pats=True)[0],
-                    parser=etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+                    parser=etree.XMLParser(
+                        recover=True, no_network=True, resolve_entities=False
+                    ),
                 )
                 entries = entry(feed)
             except Exception as e:
-                log.exception('Failed to parse identify results')
+                log.exception("Failed to parse identify results")
                 return as_unicode(e)
 
             if not entries and title and not abort.is_set():
                 if identifiers:
-                    log('No results found, retrying without identifiers')
+                    log("No results found, retrying without identifiers")
                     return self.identify(
                         log,
                         result_queue,
                         abort,
                         title=title,
                         authors=authors,
-                        timeout=timeout
+                        timeout=timeout,
                     )
                 ntitle = cleanup_title(title)
                 if ntitle and ntitle != title:
-                    log('No results found, retrying without sub-title')
+                    log("No results found, retrying without sub-title")
                     return self.identify(
                         log,
                         result_queue,
                         abort,
                         title=ntitle,
                         authors=authors,
-                        timeout=timeout
+                        timeout=timeout,
                     )
 
-            #self.get_all_details(br, log, entries, abort, result_queue, timeout)
+            # self.get_all_details(br, log, entries, abort, result_queue, timeout)
             isbns = []
             for relevance, i in enumerate(entries):
                 isbn_i = get_isbns(br, log, i, timeout)
@@ -526,10 +544,10 @@ class jike(Source):
 
             for query in queries:
                 br = self.browser
-                #br.addheaders = [
-                #    ('apikey', self.prefs["apikey"]),
-                #]
-                #log('apikey is ',self.prefs["apikey"])
+                br.addheaders = [
+                    ("apikey", self.prefs["apikey"]),
+                ]
+                log("apikey is ", self.prefs["apikey"])
                 try:
                     raw = br.open_novisit(query, timeout=timeout).read()
                 except Exception as e:
@@ -543,40 +561,54 @@ class jike(Source):
                     j = j["data"]
                 if j is not None:
                     if entries is None:
-                        #log('here111')
+                        # log('here111')
                         entries = [j]
                     else:
-                        #log('here222')
-                        #log('type0',type(entries))
-                        entry=[j]
-                        new = entries+entry
+                        # log('here222')
+                        # log('type0',type(entries))
+                        entry = [j]
+                        new = entries + entry
                         entries = new
-                        #log('type1',type(j))
-                        #log('type2',type([j]))
-                        #log('type2.5',type(entry))
-                        #log('type2.2',type(new))
-                        #log('type3',type(entries))
-                #log('this entry is', entries)
-                
-                
+                        # log('type1',type(j))
+                        # log('type2',type([j]))
+                        # log('type2.5',type(entry))
+                        # log('type2.2',type(new))
+                        # log('type3',type(entries))
+                # log('this entry is', entries)
 
-                if not entries and identifiers and title and authors and not abort.is_set():
+                if (
+                    not entries
+                    and identifiers
+                    and title
+                    and authors
+                    and not abort.is_set()
+                ):
                     return self.identify(
-                        log, result_queue, abort, title=title, authors=authors, timeout=timeout
+                        log,
+                        result_queue,
+                        abort,
+                        title=title,
+                        authors=authors,
+                        timeout=timeout,
                     )
                 # There is no point running these queries in threads as douban
                 # throttles requests returning 403 Forbidden errors
         self.get_all_details(br, log, entries, abort, result_queue, timeout)
+
     # }}}
 
-if __name__ == '__main__':  # tests {{{
+
+if __name__ == "__main__":  # tests {{{
     # To run these test use: calibre-debug
     # src/calibre/ebooks/metadata/sources/google.py
     from calibre.ebooks.metadata.sources.test import (
-        test_identify_plugin, title_test, authors_test
+        test_identify_plugin,
+        title_test,
+        authors_test,
     )
+
     tests = [
-        #(
+        # (
         #       {
         #           "identifiers": {"isbn": " 9787542663764"},
         #           "title": "八月炮火",
@@ -584,13 +616,8 @@ if __name__ == '__main__':  # tests {{{
         #       },
         #       [title_test("八月炮火", exact=True), authors_test(["巴巴拉·塔奇曼"])],
         #   ),
-            (
-                {"title": "新名字的故事"},
-                [title_test("新名字的故事", exact=False)]
-            )
+        ({"title": "新名字的故事"}, [title_test("新名字的故事", exact=False)])
     ]
     test_identify_plugin(jike.name, tests[:])
 
 # }}}
-
-
