@@ -1,3 +1,5 @@
+# Support adding API key
+Added apikey option back to the plugin, get your own api key [here](https://jike.xyz/api/isbn.html#%E8%8E%B7%E5%8F%96apikey)
 # How to install
 
 (1) in `Terminal.app` or your prefer command line terminal
